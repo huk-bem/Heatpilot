@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heatpilot – Heizlast für die Wärmepumpe ermitteln</title>
+<meta name="description" content="Heizlast-Rechner für Reihenhaus, Doppelhaushälfte, freistehendes Haus und Wohnung. Schnellschätzung, Detailrechnung mit U-Werten und Gegenprobe über den Jahresverbrauch.">
+<meta name="theme-color" content="#0b5f5c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b5f5c'/%3E%3Cpath d='M7 17 16 8l9 9v8H7z' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M12 21h8' stroke='%23f08a55' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/heatpilot.css">
+</head>
+<body>
+<!-- page:start -->
+<div class="shell">
+
+  <header class="head">
+    <p class="brand">Heatpilot</p>
+    <h1>Heizlast für die Wärmepumpe ermitteln</h1>
+    <p class="lead">Wie viel Heizleistung braucht das Haus am kältesten Tag? Wenige Angaben reichen für eine erste Zahl. Der Jahresverbrauch der bisherigen Heizung prüft sie gegen.</p>
+  </header>
+
+  <div class="cols">
+    <form class="form" id="form" novalidate>
+
+      <div class="block-head">
+        <div class="seg" role="radiogroup" aria-label="Genauigkeit der Eingabe">
+          <label><input type="radio" name="mode" id="mode-quick" value="quick" checked><span>Schnell</span></label>
+          <label><input type="radio" name="mode" id="mode-detail" value="detail"><span>Detailliert</span></label>
+        </div>
+        <p class="note" id="example-note">Beispiel: Reihenmittelhaus, Baujahr 1969–1978. Eigene Werte einfach überschreiben.</p>
+      </div>
+
+      <section class="block">
+        <h2>Gebäude</h2>
+        <div class="types" role="radiogroup" aria-label="Haustyp">
+          <label><input type="radio" name="type" id="type-efh" value="efh"><span class="card">
+            <svg viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path class="on" d="M19 28V14l11-10 11 10v14z"/><path d="M4 28h52"/></svg>
+            Freistehendes Haus</span></label>
+          <label><input type="radio" name="type" id="type-dhh" value="dhh"><span class="card">
+            <svg viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path class="on" d="M12 28V14l18-10v24z"/><path d="M30 4l18 10v14H30"/><path d="M4 28h52"/></svg>
+            Doppelhaushälfte</span></label>
+          <label><input type="radio" name="type" id="type-reh" value="reh"><span class="card">
+            <svg viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path class="on" d="M6 28V12l8-7 8 7v16z"/><path d="M22 12l8-7 8 7v16H22M38 12l8-7 8 7v16H38"/><path d="M2 28h56"/></svg>
+            Reihenendhaus</span></label>
+          <label><input type="radio" name="type" id="type-rmh" value="rmh" checked><span class="card">
+            <svg viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M6 28V12l8-7 8 7M38 12l8-7 8 7v16"/><path class="on" d="M22 28V12l8-7 8 7v16z"/><path d="M2 28h56"/></svg>
+            Reihenmittelhaus</span></label>
+          <label><input type="radio" name="type" id="type-whg" value="whg"><span class="card">
+            <svg viewBox="0 0 60 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14 28V3h32v25M14 11.3h32M14 19.6h32M30 3v25"/><path class="on" d="M30 11.3h16v8.3H30z"/><path d="M4 28h52"/></svg>
+            Wohnung</span></label>
+        </div>
+
+        <div class="grid">
+          <label class="field"><span class="label">Beheizte Wohnfläche</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="area" value="125" autocomplete="off"><span class="unit">m²</span></span></label>
+          <label class="field"><span class="label">Baujahr</span>
+            <select id="year"></select></label>
+          <label class="field"><span class="label">Personen im Haushalt</span>
+            <span class="inp"><input type="text" inputmode="numeric" id="persons" value="3" autocomplete="off"></span></label>
+        </div>
+
+        <div class="grid" data-house>
+          <div class="field"><span class="label" id="lab-floors">Vollgeschosse ohne Dach und Keller</span>
+            <div class="seg wide" role="radiogroup" aria-labelledby="lab-floors">
+              <label><input type="radio" name="floors" id="floors-1" value="1"><span>1</span></label>
+              <label><input type="radio" name="floors" id="floors-2" value="2" checked><span>2</span></label>
+              <label><input type="radio" name="floors" id="floors-3" value="3"><span>3</span></label>
+            </div></div>
+        </div>
+
+        <div class="grid" data-flat hidden>
+          <label class="field"><span class="label">Lage im Haus</span>
+            <select id="flatPos">
+              <option value="eg">Erdgeschoss</option>
+              <option value="mitte" selected>Zwischengeschoss</option>
+              <option value="top">Oberstes Geschoss</option>
+            </select></label>
+          <label class="field"><span class="label">Seiten mit Außenwand</span>
+            <select id="flatSides">
+              <option value="1">1 Seite</option>
+              <option value="2" selected>2 Seiten</option>
+              <option value="3">3 Seiten</option>
+              <option value="4">4 Seiten</option>
+            </select></label>
+        </div>
+
+        <div class="grid">
+          <label class="field" id="f-roof"><span class="label">Oberer Abschluss</span>
+            <select id="roof">
+              <option value="dg" selected>Ausgebautes, beheiztes Dachgeschoss</option>
+              <option value="attic">Unbeheizter Dachboden</option>
+              <option value="flat">Flachdach</option>
+            </select></label>
+          <label class="field" id="f-base"><span class="label">Unterer Abschluss</span>
+            <select id="base">
+              <option value="keller" selected>Unbeheizter Keller</option>
+              <option value="boden">Bodenplatte auf Erdreich</option>
+            </select></label>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Dämmung und Fenster</h2>
+        <p class="hint">Ohne Angaben rechnet die Seite mit dem Zustand, der für das Baujahr typisch ist. Jede spätere Verbesserung senkt die Heizlast deutlich.</p>
+        <div class="grid">
+          <label class="field"><span class="label">Fenster</span>
+            <select id="win"></select></label>
+        </div>
+        <div class="grid">
+          <div class="field" id="f-insWall"><span class="label">Fassade nachträglich gedämmt</span>
+            <div class="chips" data-for="insWall" role="group" aria-label="Dämmstärke Fassade">
+              <button type="button" value="0">Nein</button><button type="button" value="6">6 cm</button><button type="button" value="10">10 cm</button><button type="button" value="16">16 cm</button>
+            </div>
+            <span class="inp" data-detail hidden><input type="text" inputmode="decimal" id="insWall" placeholder="0" aria-label="Dämmstärke Fassade in Zentimetern" autocomplete="off"><span class="unit">cm</span></span></div>
+          <div class="field" id="f-insRoof"><span class="label">Dach oder oberste Decke gedämmt</span>
+            <div class="chips" data-for="insRoof" role="group" aria-label="Dämmstärke Dach">
+              <button type="button" value="0">Nein</button><button type="button" value="10">10 cm</button><button type="button" value="16">16 cm</button><button type="button" value="24">24 cm</button>
+            </div>
+            <span class="inp" data-detail hidden><input type="text" inputmode="decimal" id="insRoof" placeholder="0" aria-label="Dämmstärke Dach in Zentimetern" autocomplete="off"><span class="unit">cm</span></span></div>
+          <div class="field" id="f-insFloor"><span class="label">Kellerdecke oder Boden gedämmt</span>
+            <div class="chips" data-for="insFloor" role="group" aria-label="Dämmstärke Kellerdecke">
+              <button type="button" value="0">Nein</button><button type="button" value="4">4 cm</button><button type="button" value="8">8 cm</button><button type="button" value="12">12 cm</button>
+            </div>
+            <span class="inp" data-detail hidden><input type="text" inputmode="decimal" id="insFloor" placeholder="0" aria-label="Dämmstärke Kellerdecke in Zentimetern" autocomplete="off"><span class="unit">cm</span></span></div>
+        </div>
+        <label class="checkline"><input type="checkbox" id="wrg"><span>Lüftungsanlage mit Wärmerückgewinnung vorhanden</span></label>
+      </section>
+
+      <section class="block">
+        <h2>Standort und Temperaturen</h2>
+        <div class="grid">
+          <label class="field"><span class="label">Postleitzahl</span>
+            <input type="text" inputmode="numeric" id="plz" value="30" maxlength="5" autocomplete="postal-code">
+            <span class="sub">Die ersten zwei Ziffern genügen.</span></label>
+          <div class="field"><label class="label" for="te">Norm-Außentemperatur</label>
+            <div class="stepper">
+              <button type="button" data-step="-0.5" aria-label="Halbes Grad kälter">−</button>
+              <span class="inp"><input type="text" id="te" autocomplete="off"><span class="unit">°C</span></span>
+              <button type="button" data-step="0.5" aria-label="Halbes Grad wärmer">+</button>
+            </div>
+            <span class="sub" id="te-hint"></span></div>
+          <label class="field"><span class="label">Raumtemperatur</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="ti" value="20" autocomplete="off"><span class="unit">°C</span></span></label>
+        </div>
+        <p class="hint">Den genauen Wert nach DIN/TS 12831-1 für jede Postleitzahl zeigt die <a href="https://www.waermepumpe.de/werkzeuge/klimakarte/" target="_blank" rel="noopener">Klimakarte des Bundesverbands Wärmepumpe</a>. Er lässt sich oben eintragen.</p>
+      </section>
+
+      <section class="block" data-detail hidden>
+        <h2>Abmessungen</h2>
+        <p class="hint">Leere Felder rechnen mit dem grau angezeigten Schätzwert. Maße sind Außenmaße.</p>
+        <div class="grid">
+          <label class="field"><span class="label">Hausbreite (Straßenseite)</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="width" autocomplete="off"><span class="unit">m</span></span></label>
+          <label class="field"><span class="label">Haustiefe</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="depth" autocomplete="off"><span class="unit">m</span></span></label>
+          <label class="field"><span class="label">Geschosshöhe mit Decke</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="hg" autocomplete="off"><span class="unit">m</span></span></label>
+          <label class="field"><span class="label">Lichte Raumhöhe</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="hl" autocomplete="off"><span class="unit">m</span></span></label>
+        </div>
+      </section>
+
+      <section class="block" data-detail hidden>
+        <h2>Bauteile</h2>
+        <p class="hint">Fläche und U-Wert je Bauteil. Ein eingetragener U-Wert gilt für das fertige Bauteil und ersetzt Baujahr und Dämmstärke.</p>
+        <div class="btable">
+          <div class="brow headrow"><span>Bauteil</span><span>Fläche in m²</span><span>U-Wert in W/(m²K)</span></div>
+          <div class="brow" id="row-wall"><span class="label">Außenwand</span>
+            <input type="text" inputmode="decimal" id="A_wall" aria-label="Fläche Außenwand" autocomplete="off">
+            <input type="text" inputmode="decimal" id="U_wall" aria-label="U-Wert Außenwand" autocomplete="off"></div>
+          <div class="brow" id="row-win"><span class="label">Fenster</span>
+            <input type="text" inputmode="decimal" id="A_win" aria-label="Fläche Fenster" autocomplete="off">
+            <input type="text" inputmode="decimal" id="U_win" aria-label="U-Wert Fenster" autocomplete="off"></div>
+          <div class="brow" id="row-door"><span class="label">Haustür</span>
+            <input type="text" inputmode="decimal" id="A_door" aria-label="Fläche Haustür" autocomplete="off">
+            <input type="text" inputmode="decimal" id="U_door" aria-label="U-Wert Haustür" autocomplete="off"></div>
+          <div class="brow" id="row-roof"><span class="label" id="lab-roofU">Dach</span>
+            <input type="text" inputmode="decimal" id="A_roof" aria-label="Fläche Dach" autocomplete="off">
+            <input type="text" inputmode="decimal" id="U_roof" aria-label="U-Wert Dach" autocomplete="off"></div>
+          <div class="brow" id="row-floor"><span class="label" id="lab-floorU">Boden</span>
+            <input type="text" inputmode="decimal" id="A_floor" aria-label="Fläche Boden" autocomplete="off">
+            <input type="text" inputmode="decimal" id="U_floor" aria-label="U-Wert Boden" autocomplete="off"></div>
+          <div class="brow" id="row-party"><span class="label" id="lab-partyU">Wand zum Nachbarn</span>
+            <input type="text" inputmode="decimal" id="A_party" aria-label="Fläche zum Nachbarn" autocomplete="off">
+            <input type="text" inputmode="decimal" id="U_party" aria-label="U-Wert zum Nachbarn" autocomplete="off"></div>
+        </div>
+
+        <div class="grid">
+          <label class="field"><span class="label">U-Wert der Wand aus dem Aufbau</span>
+            <select id="wallMat"></select></label>
+          <label class="field" id="f-wallD" hidden><span class="label">Wandstärke ohne Dämmung</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="wallD" value="36,5" autocomplete="off"><span class="unit">cm</span></span></label>
+        </div>
+        <label class="checkline" id="f-wallShell" hidden><input type="checkbox" id="wallShell"><span>Zweischalig mit Luftschicht und Verblendmauerwerk</span></label>
+      </section>
+
+      <section class="block" data-detail hidden>
+        <h2>Lüftung, Wärmebrücken, Nachbarn</h2>
+        <div class="grid">
+          <label class="field"><span class="label">Luftwechsel</span>
+            <span class="inp long"><input type="text" inputmode="decimal" id="nAir" autocomplete="off"><span class="unit">1/h</span></span>
+            <span class="sub">0,3 sehr dicht, 0,5 mittel, 0,7 zugig</span></label>
+          <label class="field"><span class="label">Wärmebrückenzuschlag</span>
+            <span class="inp long"><input type="text" inputmode="decimal" id="dUwb" autocomplete="off"><span class="unit">W/(m²K)</span></span>
+            <span class="sub">0,10 Bestand, 0,05 gedämmt, 0,03 optimiert</span></label>
+          <label class="field" id="f-tn"><span class="label">Temperatur beim Nachbarn</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="tn" autocomplete="off"><span class="unit">°C</span></span>
+            <span class="sub">15 beheizt, 5 bei Leerstand</span></label>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Gegenprobe: Verbrauch der bisherigen Heizung</h2>
+        <p class="hint">Am besten der Mittelwert aus zwei oder drei Jahren. Die Menge steht auf der Jahresabrechnung.</p>
+        <div class="grid">
+          <label class="field"><span class="label">Energieträger</span>
+            <select id="fuel"></select></label>
+          <label class="field" data-fuel hidden><span class="label">Jahresverbrauch</span>
+            <span class="inp xlong"><input type="text" inputmode="decimal" id="amount" autocomplete="off"><span class="unit" id="amount-unit">kWh/Jahr</span></span></label>
+          <label class="field" id="f-gen" hidden><span class="label">Wärmeerzeuger</span>
+            <select id="gen"><option value="nt">Niedertemperaturkessel</option></select></label>
+          <label class="field" id="f-eta" hidden><span class="label" id="eta-label">Jahresnutzungsgrad</span>
+            <span class="inp"><input type="text" inputmode="decimal" id="eta" autocomplete="off"><span class="unit" id="eta-unit">%</span></span></label>
+          <label class="field" id="f-hours" hidden><span class="label">Vollbenutzungsstunden</span>
+            <span class="inp long"><input type="text" inputmode="numeric" id="hours" autocomplete="off"><span class="unit">h/Jahr</span></span></label>
+        </div>
+        <label class="checkline" data-fuel hidden><input type="checkbox" id="wwIncl" checked><span>Warmwasser ist im Verbrauch enthalten</span></label>
+      </section>
+
+      <section class="block">
+        <h2>Wärmepumpe</h2>
+        <div class="grid">
+          <label class="field"><span class="label">Betriebsweise</span>
+            <select id="biv">
+              <option value="" selected>Ohne Heizstab</option>
+              <option value="-7">Mit Heizstab ab −7 °C</option>
+              <option value="-5">Mit Heizstab ab −5 °C</option>
+              <option value="-3">Mit Heizstab ab −3 °C</option>
+            </select></label>
+          <label class="field"><span class="label">Sperrzeiten des Netzbetreibers</span>
+            <select id="block">
+              <option value="0" selected>Keine</option>
+              <option value="2">2 Stunden am Tag</option>
+              <option value="4">4 Stunden am Tag</option>
+              <option value="6">6 Stunden am Tag</option>
+            </select></label>
+          <label class="field" id="f-basis" hidden><span class="label">Grundlage der Auslegung</span>
+            <select id="basis">
+              <option value="auto" selected>Automatisch</option>
+              <option value="hull">Berechnung aus der Gebäudehülle</option>
+              <option value="cons">Jahresverbrauch</option>
+            </select></label>
+        </div>
+        <label class="checkline"><input type="checkbox" id="wwWP" checked><span>Die Wärmepumpe bereitet auch das Warmwasser</span></label>
+      </section>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" id="reset">Auf Beispiel zurücksetzen</button>
+      </div>
+    </form>
+
+    <aside class="result" id="result" aria-live="polite">
+      <div class="r-main">
+        <p class="eyebrow">Heizlast des Gebäudes</p>
+        <p class="big"><b id="r-kw">–</b><span>kW</span></p>
+        <p class="r-kind" id="r-kind"></p>
+        <p class="r-cond" id="r-cond"></p>
+      </div>
+
+      <div class="r-scale">
+        <div class="r-scale-top"><span><strong id="r-spec">–</strong> W je m² Wohnfläche</span><span id="scale-label"></span></div>
+        <div class="scale" id="scale"></div>
+        <div class="scale-ends"><span>0</span><span>40</span><span>80</span><span>120</span><span>160</span></div>
+      </div>
+
+      <ul class="pair">
+        <li><span>Berechnung aus der Gebäudehülle</span><span id="r-hull"></span></li>
+        <li><span>Gegenprobe aus dem Verbrauch</span><span id="r-cons"></span></li>
+      </ul>
+
+      <div class="check" id="check"></div>
+
+      <div class="r-block">
+        <p class="eyebrow">Wärmepumpe mindestens</p>
+        <p class="wp-main"><b id="wp-kw">–</b><span>kW</span></p>
+        <p class="wp-at" id="wp-at"></p>
+        <ul class="pair" id="wp-steps"></ul>
+      </div>
+
+      <div class="r-block">
+        <h3>Wo die Wärme verloren geht</h3>
+        <ul class="parts" id="parts"></ul>
+      </div>
+
+      <div class="r-block">
+        <h3>Heizleistung je Außentemperatur</h3>
+        <div class="chart" id="chart"></div>
+        <p class="legend">Über 15 °C bleibt nur das Warmwasser. Der Punkt bei +7 °C zeigt die Teillast in der Übergangszeit.</p>
+        <p class="hint" id="wp-part"></p>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn" id="copy">Zusammenfassung kopieren</button>
+      </div>
+      <textarea id="copy-out" readonly hidden aria-label="Zusammenfassung zum Kopieren"></textarea>
+      <p class="disclaimer">Überschlägige Ermittlung für die Vorauswahl. Für Förderung und hydraulischen Abgleich ist eine raumweise Heizlastberechnung nach DIN EN 12831-1 durch einen Fachbetrieb nötig.</p>
+    </aside>
+  </div>
+
+  <details class="method">
+    <summary>So rechnet Heatpilot</summary>
+    <div class="method-body">
+      <p><strong>Gebäudehülle.</strong> Für jedes Bauteil wird Fläche mal U-Wert mal Temperaturdifferenz gerechnet, dazu kommen Wärmebrücken und Lüftung:</p>
+      <p class="formula">Φ = Σ (A · (U + ΔU<sub>WB</sub>) · f) · (θ<sub>innen</sub> − θ<sub>außen</sub>) + 0,34 · n · V · (θ<sub>innen</sub> − θ<sub>außen</sub>)</p>
+      <ul>
+        <li>Flächen entstehen im Schnellmodus aus Wohnfläche, Haustyp und Geschosszahl. Im Detailmodus lassen sie sich einzeln überschreiben.</li>
+        <li>U-Werte ohne eigene Angabe sind Pauschalwerte je Baualtersklasse, angelehnt an die Bekanntmachung der Regeln zur Datenaufnahme im Wohngebäudebestand (BAnz AT 04.12.2020) und die IWU-Gebäudetypologie. Nachträgliche Dämmung rechnet mit Wärmeleitgruppe 035.</li>
+        <li>Faktor f: 1,0 gegen Außenluft, 0,8 gegen unbeheizten Dachboden, 0,5 gegen unbeheizten Keller, 0,3 gegen Erdreich.</li>
+        <li>Wände und Decken zu beheizten Nachbarn zählen mit einer Nachbartemperatur von 15 °C.</li>
+        <li>Der Luftwechsel n liegt je nach Dichtheit zwischen 0,3 und 0,6 pro Stunde, mit Wärmerückgewinnung bei 0,23.</li>
+      </ul>
+      <p><strong>Verbrauch.</strong> Jahresverbrauch mal Heizwert mal Nutzungsgrad ergibt die erzeugte Wärme. Davon gehen 800 kWh Warmwasser je Person ab. Der Rest geteilt durch 2.000 Vollbenutzungsstunden (1.800 bei sehr gut gedämmten Häusern) ergibt die Heizlast. Die Spanne zeigt plus und minus 12 Prozent bei den Stunden.</p>
+      <p><strong>Auslegungswert.</strong> Liegen beide Verfahren höchstens 20 Prozent auseinander, gilt ihr Mittelwert. Liegt der Verbrauch deutlich darunter, gilt der obere Verbrauchswert, damit eine Reserve bleibt. Liegt er deutlich darüber, gilt der Verbrauchswert.</p>
+      <p><strong>Wärmepumpe.</strong> Für Warmwasser kommen 0,25 kW je Person dazu. Sperrzeiten erhöhen den Bedarf um den Faktor 24 / (24 − Sperrstunden). Die Kennlinie fällt linear bis zur Heizgrenze von 15 °C.</p>
+      <p><strong>Grenzen.</strong> Die Außentemperatur je Postleitzahl ist ein gerundeter Richtwert. Gebäude mit Anbauten, Wintergärten, sehr hohen Räumen oder gemischter Bauweise brauchen die Detaileingabe oder eine Berechnung vor Ort.</p>
+    </div>
+  </details>
+
+  <p class="foot">Alle Eingaben bleiben auf diesem Gerät. Die Seite überträgt keine Daten und lädt nichts von fremden Servern.</p>
+</div>
+
+<div class="bar" id="bar">
+  <div><small>Heizlast</small><strong id="bar-kw">–</strong></div>
+  <a href="#result">Zum Ergebnis</a>
+</div>
+<!-- page:end -->
+<script src="assets/heatpilot.js"></script>
+</body>
+</html>
