@@ -4,10 +4,10 @@ Heizlast-Rechner für die Auslegung einer Wärmepumpe. Eine statische Webseite o
 
 ## Was die Seite kann
 
-- **Schnellschätzung** aus Haustyp, Wohnfläche, Baujahr, Dämmzustand und Postleitzahl
+- **Schnellschätzung** aus Haustyp, Wohnfläche, Baujahr, Dachgeschoss, Keller, nachträglicher Dämmung, Windlage und Postleitzahl
 - **Haustypen:** freistehendes Haus, Doppelhaushälfte, Reihenendhaus, Reihenmittelhaus, Wohnung
 - **Detailmodus** mit Abmessungen, Flächen und U-Werten je Bauteil, Wandaufbau (Material und Wandstärke), Luftwechsel, Wärmebrücken und Nachbartemperatur
-- **Gegenprobe** über den Jahresverbrauch der bisherigen Heizung (Gas, Öl, Flüssiggas, Pellets, Holz, Fernwärme, Strom, Wärmepumpe)
+- **Gegenprobe** über den Jahresverbrauch der bisherigen Heizung (Gas, Öl, Flüssiggas, Pellets, Holz, Fernwärme, Strom, Wärmepumpe) mit Abzug des Warmwassers je nach bisheriger Bereitung
 - **Wärmepumpen-Auslegung** mit Warmwasser-Zuschlag, Sperrzeiten, Bivalenzpunkt und Kennlinie über der Außentemperatur
 - Helles und dunkles Farbschema, Bedienung auf Handy und Desktop
 - Eingaben bleiben im Browser (localStorage), es werden keine Daten übertragen
@@ -45,7 +45,9 @@ Alle Kennwerte stehen am Anfang von `assets/heatpilot.js` (`YEARS`, `WIN`, `WALL
 - U-Werte: Pauschalwerte je Baualtersklasse, angelehnt an die Bekanntmachung der Regeln zur Datenaufnahme und Datenverwendung im Wohngebäudebestand (BAnz AT 04.12.2020) und die IWU-Gebäudetypologie; nachträgliche Dämmung mit λ = 0,035 W/(mK)
 - Faktor f: 1,0 Außenluft, 0,8 unbeheizter Dachboden, 0,5 unbeheizter Keller, 0,3 Erdreich
 - Nachbarn: Trennwände und Decken mit U = 0,9 W/(m²K) gegen 15 °C
-- Luftwechsel n: 0,3 bis 0,6 1/h je nach Dichtheit, 0,23 mit Wärmerückgewinnung
+- Luftwechsel n: 0,4 bis 0,6 1/h je nach Baujahr und Fenstern, 0,23 mit Wärmerückgewinnung; Windlage geschützt × 0,85, frei und windig × 1,3
+- Wärmebrücken: ΔU = 0,10 W/(m²K), ab Baujahr 2009 0,05
+- Himmelsrichtung: geht nicht ein. DIN EN 12831 rechnet den kältesten Tag ohne Sonne; der Sonnenkorrekturwert der alten DIN 4701 ist entfallen
 
 **Verbrauch:**
 
@@ -53,7 +55,8 @@ Alle Kennwerte stehen am Anfang von `assets/heatpilot.js` (`YEARS`, `WIN`, `WALL
 Φ = (Menge · Heizwert · Nutzungsgrad − Warmwasser) / Vollbenutzungsstunden
 ```
 
-mit 800 kWh Warmwasser je Person und 2.000 Vollbenutzungsstunden (1.800 bei sehr gut gedämmten Häusern).
+- Warmwasser: 650 kWh je Person; mit Speicher 400 kWh mehr, mit Zirkulation weitere 500 kWh; bei separater Bereitung kein Abzug. Ein Sommermonatsverbrauch mal zwölf ersetzt die Schätzung.
+- Vollbenutzungsstunden: linear von 1.400 h (20 W/m²) bis 2.000 h (ab 90 W/m² berechneter Heizlast).
 
 **Auslegungswert:** Mittelwert, wenn beide Verfahren höchstens 20 % auseinanderliegen. Liegt der Verbrauch deutlich darunter, der obere Verbrauchswert als Reserve. Liegt er deutlich darüber, der Verbrauchswert.
 

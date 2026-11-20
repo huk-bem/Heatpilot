@@ -60,12 +60,13 @@
         </div>
 
         <div class="grid" data-house>
-          <div class="field"><span class="label" id="lab-floors">Vollgeschosse ohne Dach und Keller</span>
+          <div class="field"><span class="label" id="lab-floors">Vollgeschosse unter dem Dach</span>
             <div class="seg wide" role="radiogroup" aria-labelledby="lab-floors">
               <label><input type="radio" name="floors" id="floors-1" value="1"><span>1</span></label>
               <label><input type="radio" name="floors" id="floors-2" value="2" checked><span>2</span></label>
               <label><input type="radio" name="floors" id="floors-3" value="3"><span>3</span></label>
-            </div></div>
+            </div>
+            <span class="sub">Ohne Keller und ohne Dachgeschoss gezählt.</span></div>
         </div>
 
         <div class="grid" data-flat hidden>
@@ -84,24 +85,23 @@
             </select></label>
         </div>
 
-        <div class="grid">
-          <label class="field" id="f-roof"><span class="label">Oberer Abschluss</span>
-            <select id="roof">
-              <option value="dg" selected>Ausgebautes, beheiztes Dachgeschoss</option>
-              <option value="attic">Unbeheizter Dachboden</option>
-              <option value="flat">Flachdach</option>
-            </select></label>
-          <label class="field" id="f-base"><span class="label">Unterer Abschluss</span>
-            <select id="base">
-              <option value="keller" selected>Unbeheizter Keller</option>
-              <option value="boden">Bodenplatte auf Erdreich</option>
-            </select></label>
-        </div>
+        <div class="field" id="f-roof"><span class="label" id="lab-roof">Dachgeschoss</span>
+          <div class="seg wrap" role="radiogroup" aria-labelledby="lab-roof">
+            <label><input type="radio" name="roof" id="roof-dg" value="dg" checked><span id="roof-dg-label">Ausgebaut und beheizt</span></label>
+            <label><input type="radio" name="roof" id="roof-attic" value="attic"><span id="roof-attic-label">Kalter Dachboden</span></label>
+            <label><input type="radio" name="roof" id="roof-flat" value="flat"><span>Flachdach</span></label>
+          </div>
+          <span class="sub">Ausgebaut heißt: Wohnräume unter der Dachschräge, die mitgeheizt werden. Ihre Fläche gehört zur Wohnfläche oben.</span></div>
+        <div class="field" id="f-base"><span class="label" id="lab-base">Keller</span>
+          <div class="seg wrap" role="radiogroup" aria-labelledby="lab-base">
+            <label><input type="radio" name="base" id="base-keller" value="keller" checked><span>Unbeheizter Keller</span></label>
+            <label><input type="radio" name="base" id="base-boden" value="boden"><span>Kein Keller, Bodenplatte</span></label>
+          </div></div>
       </section>
 
       <section class="block">
         <h2>Dämmung und Fenster</h2>
-        <p class="hint">Ohne Angaben rechnet die Seite mit dem Zustand, der für das Baujahr typisch ist. Jede spätere Verbesserung senkt die Heizlast deutlich.</p>
+        <p class="hint">„Nein“ bedeutet: Zustand wie zum Baujahr. Hier zählt nur Dämmung, die später dazugekommen ist. Jede Verbesserung senkt die Heizlast deutlich.</p>
         <div class="grid">
           <label class="field"><span class="label">Fenster</span>
             <select id="win"></select></label>
@@ -112,12 +112,12 @@
               <button type="button" value="0">Nein</button><button type="button" value="6">6 cm</button><button type="button" value="10">10 cm</button><button type="button" value="16">16 cm</button>
             </div>
             <span class="inp" data-detail hidden><input type="text" inputmode="decimal" id="insWall" placeholder="0" aria-label="Dämmstärke Fassade in Zentimetern" autocomplete="off"><span class="unit">cm</span></span></div>
-          <div class="field" id="f-insRoof"><span class="label">Dach oder oberste Decke gedämmt</span>
+          <div class="field" id="f-insRoof"><span class="label" id="lab-insRoof">Dachschräge gedämmt</span>
             <div class="chips" data-for="insRoof" role="group" aria-label="Dämmstärke Dach">
               <button type="button" value="0">Nein</button><button type="button" value="10">10 cm</button><button type="button" value="16">16 cm</button><button type="button" value="24">24 cm</button>
             </div>
             <span class="inp" data-detail hidden><input type="text" inputmode="decimal" id="insRoof" placeholder="0" aria-label="Dämmstärke Dach in Zentimetern" autocomplete="off"><span class="unit">cm</span></span></div>
-          <div class="field" id="f-insFloor"><span class="label">Kellerdecke oder Boden gedämmt</span>
+          <div class="field" id="f-insFloor"><span class="label" id="lab-insFloor">Kellerdecke gedämmt</span>
             <div class="chips" data-for="insFloor" role="group" aria-label="Dämmstärke Kellerdecke">
               <button type="button" value="0">Nein</button><button type="button" value="4">4 cm</button><button type="button" value="8">8 cm</button><button type="button" value="12">12 cm</button>
             </div>
@@ -141,6 +141,13 @@
             <span class="sub" id="te-hint"></span></div>
           <label class="field"><span class="label">Raumtemperatur</span>
             <span class="inp"><input type="text" inputmode="decimal" id="ti" value="20" autocomplete="off"><span class="unit">°C</span></span></label>
+          <label class="field"><span class="label">Lage des Hauses</span>
+            <select id="expo">
+              <option value="sheltered">Geschützt, dichte Bebauung</option>
+              <option value="normal" selected>Normal, Siedlung oder Vorort</option>
+              <option value="exposed">Frei und windig, z. B. Feldrand, Küste</option>
+            </select>
+            <span class="sub">Wind drückt kalte Luft durch Fugen. Die Himmelsrichtung spielt für die Heizlast keine Rolle.</span></label>
         </div>
         <p class="hint">Den genauen Wert nach DIN/TS 12831-1 für jede Postleitzahl zeigt die <a href="https://www.waermepumpe.de/werkzeuge/klimakarte/" target="_blank" rel="noopener">Klimakarte des Bundesverbands Wärmepumpe</a>. Er lässt sich oben eintragen.</p>
       </section>
@@ -224,7 +231,21 @@
           <label class="field" id="f-hours" hidden><span class="label">Vollbenutzungsstunden</span>
             <span class="inp long"><input type="text" inputmode="numeric" id="hours" autocomplete="off"><span class="unit">h/Jahr</span></span></label>
         </div>
-        <label class="checkline" data-fuel hidden><input type="checkbox" id="wwIncl" checked><span>Warmwasser ist im Verbrauch enthalten</span></label>
+        <div class="grid" data-fuel hidden>
+          <label class="field"><span class="label">Warmwasser bisher</span>
+            <select id="wwSys">
+              <option value="speicher" selected>Heizung mit Speicher</option>
+              <option value="zirk">Heizung, Speicher und Zirkulation</option>
+              <option value="kombi">Kombitherme ohne Speicher</option>
+              <option value="separat">Separat, z. B. Durchlauferhitzer</option>
+            </select>
+            <span class="sub" id="ww-hint"></span></label>
+          <label class="field" id="f-summer" hidden><span class="label">Verbrauch in einem Sommermonat</span>
+            <span class="inp xlong"><input type="text" inputmode="decimal" id="summer" autocomplete="off"><span class="unit" id="summer-unit">kWh/Monat</span></span>
+            <span class="sub">Juni bis August läuft nur das Warmwasser. Der Wert mal zwölf ersetzt die Schätzung.</span></label>
+          <label class="field" id="f-wwKwh" hidden><span class="label">Warmwasser-Abzug</span>
+            <span class="inp long"><input type="text" inputmode="decimal" id="wwKwh" autocomplete="off"><span class="unit">kWh/Jahr</span></span></label>
+        </div>
       </section>
 
       <section class="block">
@@ -290,6 +311,7 @@
       <div class="r-block">
         <h3>Wo die Wärme verloren geht</h3>
         <ul class="parts" id="parts"></ul>
+        <p class="hint" id="r-geo"></p>
       </div>
 
       <div class="r-block">
@@ -317,9 +339,10 @@
         <li>U-Werte ohne eigene Angabe sind Pauschalwerte je Baualtersklasse, angelehnt an die Bekanntmachung der Regeln zur Datenaufnahme im Wohngebäudebestand (BAnz AT 04.12.2020) und die IWU-Gebäudetypologie. Nachträgliche Dämmung rechnet mit Wärmeleitgruppe 035.</li>
         <li>Faktor f: 1,0 gegen Außenluft, 0,8 gegen unbeheizten Dachboden, 0,5 gegen unbeheizten Keller, 0,3 gegen Erdreich.</li>
         <li>Wände und Decken zu beheizten Nachbarn zählen mit einer Nachbartemperatur von 15 °C.</li>
-        <li>Der Luftwechsel n liegt je nach Dichtheit zwischen 0,3 und 0,6 pro Stunde, mit Wärmerückgewinnung bei 0,23.</li>
+        <li>Der Luftwechsel n liegt je nach Baujahr und Fenstern zwischen 0,4 und 0,6 pro Stunde, mit Wärmerückgewinnung bei 0,23. Der Wärmebrückenzuschlag beträgt 0,10 W/(m²K), ab Baujahr 2009 0,05. Eine windgeschützte Lage senkt ihn um 15 Prozent, eine freie, windige Lage erhöht ihn um 30 Prozent.</li>
+        <li>Die Himmelsrichtung geht nicht ein. Die Norm-Heizlast gilt für den kältesten Tag ohne Sonne; Sonnengewinne zählt DIN EN 12831 bewusst nicht. Sie senken aber den Jahresverbrauch und damit die Gegenprobe.</li>
       </ul>
-      <p><strong>Verbrauch.</strong> Jahresverbrauch mal Heizwert mal Nutzungsgrad ergibt die erzeugte Wärme. Davon gehen 800 kWh Warmwasser je Person ab. Der Rest geteilt durch 2.000 Vollbenutzungsstunden (1.800 bei sehr gut gedämmten Häusern) ergibt die Heizlast. Die Spanne zeigt plus und minus 12 Prozent bei den Stunden.</p>
+      <p><strong>Verbrauch.</strong> Jahresverbrauch mal Heizwert mal Nutzungsgrad ergibt die erzeugte Wärme. Davon geht das Warmwasser ab: 650 kWh je Person, mit Speicher 400 kWh mehr, mit Zirkulation weitere 500 kWh, bei separater Bereitung nichts. Ein Sommermonatsverbrauch ersetzt diese Schätzung. Der Rest geteilt durch die Vollbenutzungsstunden ergibt die Heizlast. Sie steigen linear von 1.400 h bei 20 W/m² bis 2.000 h ab 90 W/m² berechneter Heizlast. Gut gedämmte Häuser decken mehr über Sonne und Abwärme und erreichen weniger Volllaststunden. Die Spanne zeigt plus und minus 12 Prozent bei den Stunden.</p>
       <p><strong>Auslegungswert.</strong> Liegen beide Verfahren höchstens 20 Prozent auseinander, gilt ihr Mittelwert. Liegt der Verbrauch deutlich darunter, gilt der obere Verbrauchswert, damit eine Reserve bleibt. Liegt er deutlich darüber, gilt der Verbrauchswert.</p>
       <p><strong>Wärmepumpe.</strong> Für Warmwasser kommen 0,25 kW je Person dazu. Sperrzeiten erhöhen den Bedarf um den Faktor 24 / (24 − Sperrstunden). Die Kennlinie fällt linear bis zur Heizgrenze von 15 °C.</p>
       <p><strong>Grenzen.</strong> Die Außentemperatur je Postleitzahl ist ein gerundeter Richtwert. Gebäude mit Anbauten, Wintergärten, sehr hohen Räumen oder gemischter Bauweise brauchen die Detaileingabe oder eine Berechnung vor Ort.</p>
