@@ -113,10 +113,36 @@
     uParty: 0.9,          // Trennwand / Decke zum Nachbarn
     tNeighbour: 15,
     cAir: 0.34,           // Wh/(m³K)
-    wwPerPerson: 800,     // kWh/a Warmwasser einschl. Speicherverlusten
+    wwUse: 650,           // kWh/a je Person: rund 40 l/Tag um 35 K erwärmt, mit Leitungsverlusten
+    wwStore: 400,         // kWh/a Bereitschaftsverlust eines Warmwasserspeichers
+    wwCirc: 500,          // kWh/a zusätzlich mit Zirkulationsleitung
     wwKwPerPerson: 0.25,  // kW Zuschlag je Person
     heatLimit: 15         // Heizgrenztemperatur, °C
   };
+
+  // Windlage: wirkt auf die Undichtheiten (Infiltration). Nach DIN EN 12831 über den
+  // Abschirmungskoeffizienten; die Himmelsrichtung geht in die Norm-Heizlast nicht ein.
+  var EXPO = {
+    sheltered: { f: 0.85, label: 'Geschützt (dichte Bebauung, Stadt)' },
+    normal:    { f: 1.0,  label: 'Normal (Siedlung, Vorort)' },
+    exposed:   { f: 1.3,  label: 'Frei und windig (Feldrand, Küste, Kuppe)' }
+  };
+
+  var WWSYS = {
+    speicher: { label: 'Über die Heizung, mit Warmwasserspeicher' },
+    zirk:     { label: 'Über die Heizung, Speicher mit Zirkulation' },
+    kombi:    { label: 'Über die Heizung, Kombitherme ohne Speicher' },
+    separat:  { label: 'Separat, z. B. Durchlauferhitzer oder Elektroboiler' }
+  };
+
+  // Vollbenutzungsstunden: Je besser gedämmt, desto größer der Anteil der Sonnen- und
+  // inneren Gewinne und desto weniger Stunden läuft die Heizung rechnerisch unter Volllast.
+  // Linear zwischen 1.400 h (20 W/m² und weniger) und 2.000 h (90 W/m² und mehr), ohne Sprünge.
+  function hoursFor(spec) {
+    if (!(spec > 0)) return 2000;
+    var x = Math.min(Math.max(spec, 20), 90);
+    return Math.round((1400 + (x - 20) * 600 / 70) / 10) * 10;
+  }
 
   /* ---------- Rechenkern ---------- */
 
@@ -219,15 +245,19 @@
         U_floor = pick(s.U_floor, auto.U_floor), U_win = pick(s.U_win, auto.U_win),
         U_door = pick(s.U_door, auto.U_door), U_party = pick(s.U_party, auto.U_party);
 
-    auto.dUwb = s.year >= 10 ? 0.03 : (s.year >= 9 || pick(s.insWall, 0) >= 6) ? 0.05 : 0.10;
+    // Wärmebrücken: 0,10 ohne Nachweis (auch nach nachträglicher Dämmung), 0,05 ab EnEV 2009.
+    // 0,03 setzt einen Wärmebrückennachweis voraus und ist nur im Detailmodus wählbar.
+    auto.dUwb = s.year >= 9 ? 0.05 : 0.10;
     var dUwb = pick(s.dUwb, auto.dUwb);
 
     /* Lüftung: wirksamer Luftwechsel auf Gebäudeebene */
+    // Ohne Lüftungsanlage wird über Fenster gelüftet; 0,4 1/h gilt auch für dichte Neubauten.
     if (s.wrg) auto.nAir = 0.23;
-    else if (s.year >= 9) auto.nAir = 0.3;
-    else if (s.year >= 7 || U_win <= 1.7) auto.nAir = 0.4;
-    else if (s.year >= 5) auto.nAir = 0.5;
+    else if (s.year >= 7) auto.nAir = 0.4;
+    else if (s.year >= 5 || U_win <= 1.7) auto.nAir = 0.5;
     else auto.nAir = 0.6;
+    var expo = EXPO[s.expo] || EXPO.normal;
+    auto.nAir = Math.round(auto.nAir * expo.f * 100) / 100;
     var nAir = pick(s.nAir, auto.nAir);
     var volume = area * hl;
 
@@ -262,16 +292,25 @@
     var cons = null;
     var fuel = FUEL[s.fuel];
     auto.eta = fuel ? (fuel.gen ? (GEN[s.gen] || GEN.nt).eta : fuel.eta) : null;
-    auto.hours = hull.spec > 0 && hull.spec < 45 ? 1800 : 2000;
+    auto.hours = hoursFor(hull.spec);
     var persons = Math.max(pick(s.persons, 3), 0);
+    var wwSys = WWSYS[s.wwSys] ? s.wwSys : (s.wwIncl === false ? 'separat' : 'speicher');
+    auto.wwKwh = wwSys === 'separat' ? 0 : persons * C.wwUse +
+      (wwSys === 'speicher' ? C.wwStore : wwSys === 'zirk' ? C.wwStore + C.wwCirc : 0);
+    var wwSource = 'model';
+    if (fuel && has(s.summer) && s.summer > 0 && wwSys !== 'separat') {
+      auto.wwKwh = s.summer * 12 * fuel.hi * pick(s.eta, auto.eta);
+      wwSource = 'summer';
+    }
     if (fuel && has(s.amount) && s.amount > 0) {
       var eta = pick(s.eta, auto.eta);
       var hours = Math.max(pick(s.hours, auto.hours), 500);
       var useful = s.amount * fuel.hi * eta;
-      var ww = s.wwIncl ? persons * C.wwPerPerson : 0;
+      var ww = Math.max(pick(s.wwKwh, auto.wwKwh), 0);
+      if (has(s.wwKwh)) wwSource = 'manual';
       var qh = Math.max(useful - ww, 0);
       cons = {
-        useful: useful, ww: ww, qh: qh, hours: hours,
+        useful: useful, ww: ww, wwSys: wwSys, wwSource: wwSource, qh: qh, hours: hours,
         kW: qh / hours, low: qh / (hours * 1.12), high: qh / (hours * 0.88),
         spec: area > 0 ? qh / hours * 1000 / area : 0,
         perArea: area > 0 ? qh / area : 0
@@ -305,13 +344,15 @@
 
     return {
       ti: ti, te: te, dT: dT, area: area, volume: volume, region: plz ? plz[1] : null,
-      geo: { w: w, d: d, ag: ag, hWall: hWall, floors: floors, dg: dg },
+      geo: { w: w, d: d, ag: ag, hWall: hWall, floors: floors, dg: dg, top: topKind, topLabel: topLabel, baseLabel: baseLabel,
+             A_wall: A_wall, A_win: A_win, A_roof: A_roof, A_floor: A_floor, A_party: A_party, hasOwnTop: hasOwnTop, hasOwnBase: hasOwnBase },
+      expo: s.expo || 'normal',
       u: { wall: U_wall, roof: U_roof, floor: U_floor, win: U_win, door: U_door, party: U_party, dUwb: dUwb, nAir: nAir, tn: tn },
       hull: hull, cons: cons, basis: basis, basisKind: basisKind, wp: wp, persons: persons, auto: auto
     };
   }
 
-  var Heat = { calc: calc, YEARS: YEARS, WIN: WIN, WALLMAT: WALLMAT, FUEL: FUEL, GEN: GEN, PLZ: PLZ, C: C };
+  var Heat = { calc: calc, YEARS: YEARS, WIN: WIN, WALLMAT: WALLMAT, FUEL: FUEL, GEN: GEN, PLZ: PLZ, C: C, EXPO: EXPO, WWSYS: WWSYS, hoursFor: hoursFor };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Heat; return; }
   root.Heat = Heat;
 
@@ -368,14 +409,14 @@
   var NUM = ['area', 'ti', 'te', 'width', 'depth', 'hg', 'hl', 'insWall', 'insRoof', 'insFloor', 'wallD',
     'A_wall', 'A_win', 'A_door', 'A_roof', 'A_floor', 'A_party',
     'U_wall', 'U_win', 'U_door', 'U_roof', 'U_floor', 'U_party',
-    'dUwb', 'nAir', 'tn', 'amount', 'eta', 'hours', 'persons'];
-  var SEL = ['year', 'roof', 'base', 'flatPos', 'flatSides', 'win', 'wallMat', 'fuel', 'gen', 'block', 'biv', 'basis'];
-  var CHK = ['wrg', 'wallShell', 'wwIncl', 'wwWP'];
-  var RAD = ['mode', 'type', 'floors'];
+    'dUwb', 'nAir', 'tn', 'amount', 'eta', 'hours', 'persons', 'summer', 'wwKwh'];
+  var SEL = ['year', 'flatPos', 'flatSides', 'win', 'expo', 'wallMat', 'fuel', 'gen', 'wwSys', 'block', 'biv', 'basis'];
+  var CHK = ['wrg', 'wallShell', 'wwWP'];
+  var RAD = ['mode', 'type', 'floors', 'roof', 'base'];
   // Nur im Detailmodus wirksam; im Schnellmodus rechnet die Automatik.
   var DETAIL_ONLY = ['width', 'depth', 'hg', 'hl', 'wallMat', 'wallD', 'wallShell',
     'A_wall', 'A_win', 'A_door', 'A_roof', 'A_floor', 'A_party',
-    'U_wall', 'U_win', 'U_door', 'U_roof', 'U_floor', 'U_party', 'dUwb', 'nAir', 'tn', 'eta', 'hours'];
+    'U_wall', 'U_win', 'U_door', 'U_roof', 'U_floor', 'U_party', 'dUwb', 'nAir', 'tn', 'eta', 'hours', 'summer', 'wwKwh'];
 
   function read() {
     var s = {};
@@ -435,16 +476,28 @@
     show($('f-wallD'), wallCalc);
     show($('f-wallShell'), wallCalc);
 
-    var roofOpt = $('roof').querySelector('option[value="dg"]');
-    roofOpt.textContent = flat ? 'Dachschräge direkt über der Wohnung' : 'Ausgebautes, beheiztes Dachgeschoss';
+    $('roof-dg-label').textContent = flat ? 'Dachschräge über der Wohnung' : 'Ausgebaut und beheizt';
+    $('roof-attic-label').textContent = flat ? 'Kalter Dachboden darüber' : 'Kalter Dachboden';
+    $('lab-insRoof').textContent = { dg: 'Dachschräge gedämmt', attic: 'Oberste Geschossdecke gedämmt', flat: 'Flachdach gedämmt' }[s.roof] || 'Dach gedämmt';
+    $('lab-insFloor').textContent = s.base === 'boden' ? 'Boden gedämmt' : 'Kellerdecke gedämmt';
 
     var fuel = FUEL[s.fuel];
     doc.querySelectorAll('[data-fuel]').forEach(function (el) { show(el, !!fuel); });
     show($('f-gen'), !!(fuel && fuel.gen));
     show($('f-eta'), !!fuel && detail);
     show($('f-hours'), !!fuel && detail);
+    show($('f-summer'), !!fuel && detail && s.wwSys !== 'separat');
+    show($('f-wwKwh'), !!fuel && detail);
     if (fuel) {
       $('amount-unit').textContent = fuel.unit;
+      $('summer-unit').textContent = fuel.unit.replace('/Jahr', '/Monat');
+      var wwTxt = s.wwSys === 'separat' && !r.cons
+        ? 'Kein Abzug, das Warmwasser steckt nicht im Verbrauch.'
+        : 'Abzug für Warmwasser: ' + fmt(r.cons ? r.cons.ww : r.auto.wwKwh, 0) + ' kWh im Jahr' +
+          (r.cons && r.cons.wwSource === 'summer' ? ', aus dem Sommerverbrauch hochgerechnet.' :
+           r.cons && r.cons.wwSource === 'manual' ? ', eigener Wert.' :
+           (s.wwSys === 'separat' ? '.' : ', geschätzt für ' + fmt(r.persons, 0) + ' Personen.'));
+      $('ww-hint').textContent = wwTxt;
       $('eta-label').textContent = s.fuel === 'wp' ? 'Jahresarbeitszahl' : 'Jahresnutzungsgrad';
       $('eta-unit').textContent = s.fuel === 'wp' ? '' : '%';
     }
@@ -466,7 +519,7 @@
       A_floor: fmt(a.A_floor, 1), A_party: fmt(a.A_party, 1),
       U_wall: fmt(a.U_wall, 2), U_win: fmt(a.U_win, 2), U_door: fmt(a.U_door, 2), U_roof: fmt(a.U_roof, 2),
       U_floor: fmt(a.U_floor, 2), U_party: fmt(a.U_party, 2),
-      dUwb: fmt(a.dUwb, 2), nAir: fmt(a.nAir, 2), tn: fmt(a.tn, 0), hours: fmt(a.hours, 0),
+      dUwb: fmt(a.dUwb, 2), nAir: fmt(a.nAir, 2), tn: fmt(a.tn, 0), hours: fmt(a.hours, 0), wwKwh: fmt(a.wwKwh, 0),
       eta: a.eta === null ? '' : (s.fuel === 'wp' ? fmt(a.eta, 1) : fmt(a.eta * 100, 0))
     };
     Object.keys(ph).forEach(function (k) { $(k).placeholder = ph[k]; });
@@ -616,6 +669,13 @@
     $('r-cons').textContent = r.cons ? fmt(r.cons.kW, 1) + ' kW' : 'nicht angegeben';
     renderParts(r.hull);
     renderCheck(r);
+    var g = r.geo;
+    var geo = ['Grundfläche ' + fmt(g.w, 1) + ' × ' + fmt(g.d, 1) + ' m', 'Außenwand ' + fmt(g.A_wall, 0) + ' m²', 'Fenster ' + fmt(g.A_win, 0) + ' m²'];
+    if (g.hasOwnTop && g.A_roof > 0) geo.push(g.topLabel + ' ' + fmt(g.A_roof, 0) + ' m²');
+    if (g.hasOwnBase && g.A_floor > 0) geo.push(g.baseLabel + ' ' + fmt(g.A_floor, 0) + ' m²');
+    if (g.A_party > 0 && s.type !== 'efh') geo.push('zum Nachbarn ' + fmt(g.A_party, 0) + ' m²');
+    geo.push('Luftwechsel ' + fmt(r.u.nAir, 2) + ' pro Stunde');
+    $('r-geo').textContent = 'Angenommen: ' + geo.join(', ') + '.' + (s.mode !== 'detail' ? ' Im Detailmodus lässt sich jeder Wert überschreiben.' : '');
 
     var wp = r.wp;
     $('wp-kw').textContent = fmt(wp.pReq, 1);
@@ -636,13 +696,18 @@
     var typeLabel = { efh: 'Freistehendes Haus', dhh: 'Doppelhaushälfte', reh: 'Reihenendhaus', rmh: 'Reihenmittelhaus', whg: 'Wohnung' }[s.type];
     var lines = [
       'Heizlast-Abschätzung (Heatpilot)',
-      typeLabel + ', ' + fmt(r.area, 0) + ' m² Wohnfläche, Baujahr ' + YEARS[s.year].label,
+      typeLabel + ', ' + fmt(r.area, 0) + ' m² Wohnfläche, Baujahr ' + YEARS[s.year].label +
+        (s.type !== 'whg' ? ', ' + r.geo.floors + ' Vollgeschoss' + (r.geo.floors > 1 ? 'e' : '') + (r.geo.dg ? ' und ausgebautes Dachgeschoss' : '') : ''),
+      'Lage: ' + Heat.EXPO[r.expo].label,
       'Auslegung: ' + temp(r.te) + ' außen, ' + temp(r.ti) + ' innen',
       '',
       'Heizlast des Gebäudes: ' + fmt(r.basis, 1) + ' kW (' + fmt(spec, 0) + ' W/m²) – ' + kind,
       'Berechnung Gebäudehülle: ' + fmt(r.hull.kW, 1) + ' kW'
     ];
-    if (r.cons) lines.push('Aus Jahresverbrauch: ' + fmt(r.cons.kW, 1) + ' kW (' + fmt(r.cons.low, 1) + ' bis ' + fmt(r.cons.high, 1) + ' kW), Abweichung ' + (r.cons.dev < 0 ? '−' : '+') + fmt(Math.abs(r.cons.dev) * 100, 0) + ' %');
+    if (r.cons) {
+      lines.push('Aus Jahresverbrauch: ' + fmt(r.cons.kW, 1) + ' kW (' + fmt(r.cons.low, 1) + ' bis ' + fmt(r.cons.high, 1) + ' kW), Abweichung ' + (r.cons.dev < 0 ? '−' : '+') + fmt(Math.abs(r.cons.dev) * 100, 0) + ' %');
+      lines.push('  Warmwasser bisher: ' + Heat.WWSYS[r.cons.wwSys].label + ', Abzug ' + fmt(r.cons.ww, 0) + ' kWh/Jahr, ' + fmt(r.cons.hours, 0) + ' Vollbenutzungsstunden');
+    }
     lines.push('', 'Verluste:');
     r.hull.parts.forEach(function (p) {
       lines.push('  ' + p.label + ': ' + fmt(p.W / 1000, 2) + ' kW' + (p.A ? ' (' + fmt(p.A, 1) + ' m², U = ' + fmt(p.U, 2) + ')' : ''));

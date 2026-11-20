@@ -19,9 +19,26 @@ near(calc(Object.assign({}, none, { A_party: 100 })).hull.W, 450);
 near(calc({ wallMat: 'vollziegel', wallD: 36.5 }).u.wall, 1.611, 0.005);
 // 12 cm Dämmung WLG 035 auf U = 1,0: 1 / (1 + 0,12 / 0,035) = 0,226
 near(calc({ insWall: 12 }).u.wall, 0.2258, 0.001);
-// Verbrauch: 20.000 kWh Gas, Niedertemperatur, 3 Personen Warmwasser
-// 20.000 × 0,901 × 0,86 − 2.400 = 13.097 kWh, geteilt durch 2.000 h = 6,55 kW
-near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwIncl: true }).cons.kW, 6.549, 0.005);
+// Verbrauch: 20.000 kWh Gas, Niedertemperatur, 3 Personen, Speicher ohne Zirkulation
+// 20.000 × 0,901 × 0,86 − (3 × 650 + 400) = 13.147 kWh, geteilt durch die Vollbenutzungsstunden
+let c = calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'speicher' }).cons;
+near(c.ww, 2350); near(c.hours, Heat.hoursFor(calc({}).hull.spec)); near(c.kW, 13146.8 / c.hours, 0.005);
+// Vollbenutzungsstunden: 1.400 h bei 20 W/m², 2.000 h ab 90 W/m², linear dazwischen
+near(Heat.hoursFor(10), 1400); near(Heat.hoursFor(55), 1700); near(Heat.hoursFor(120), 2000);
+// Warmwasser separat: kein Abzug; mit Zirkulation 900 kWh Systemverluste
+near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'separat' }).cons.ww, 0);
+near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'zirk' }).cons.ww, 3 * 650 + 900);
+near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'kombi' }).cons.ww, 3 * 650);
+// Sommermonat 150 kWh Gas: 150 × 12 × 0,901 × 0,86 = 1.394,7 kWh
+near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'speicher', summer: 150 }).cons.ww, 150 * 12 * 0.901 * 0.86, 0.01);
+// Windlage skaliert den Luftwechsel: 0,6 normal -> 0,78 frei, 0,51 geschützt
+near(calc({ expo: 'exposed' }).u.nAir, 0.78); near(calc({ expo: 'sheltered' }).u.nAir, 0.51);
+// Ausgebautes Dachgeschoss: Dachschräge statt oberster Geschossdecke, größere Hüllfläche
+const dg = calc({ type: 'efh', area: 150, floors: 1, roof: 'dg' }), at = calc({ type: 'efh', area: 150, floors: 1, roof: 'attic' });
+assert.ok(dg.geo.topLabel === 'Dachschräge' && at.geo.topLabel === 'Oberste Geschossdecke');
+near(dg.geo.A_roof / dg.geo.ag, 1.25); near(at.geo.A_roof, at.geo.ag);
+// Dämmung senkt die Heizlast
+assert.ok(calc({ insRoof: 16 }).hull.W < calc({}).hull.W && calc({ insWall: 10 }).hull.W < calc({}).hull.W);
 // Sperrzeit 4 h: Faktor 24 / 20 = 1,2; Warmwasser 3 × 0,25 kW
 const wp = calc(Object.assign({}, none, { A_wall: 100, U_wall: 1, block: 4 })).wp;
 near(wp.pNorm, (3.2 + 0.75) * 1.2);
