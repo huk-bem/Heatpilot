@@ -273,6 +273,7 @@ textarea { height: 180px; padding: 10px 12px; font-size: 13px; line-height: 1.45
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn { min-height: 44px; padding: 0 18px; border-radius: var(--r); border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; cursor: pointer; }
 .btn.ghost { background: transparent; color: var(--accent); border-color: var(--line); }
+.btn.small { min-height: 36px; padding: 0 14px; font-size: 14px; }
 .btn:hover { filter: brightness(1.08); }
 .disclaimer { font-size: 13px; color: var(--muted); line-height: 1.45; }
 
