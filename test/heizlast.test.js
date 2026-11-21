@@ -22,9 +22,9 @@ near(calc({ insWall: 12 }).u.wall, 0.2258, 0.001);
 // Verbrauch: 20.000 kWh Gas, Niedertemperatur, 3 Personen, Speicher ohne Zirkulation
 // 20.000 × 0,901 × 0,86 − (3 × 650 + 400) = 13.147 kWh, geteilt durch die Vollbenutzungsstunden
 let c = calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'speicher' }).cons;
-near(c.ww, 2350); near(c.hours, Heat.hoursFor(calc({}).hull.spec)); near(c.kW, 13146.8 / c.hours, 0.005);
-// Vollbenutzungsstunden: 1.400 h bei 20 W/m², 2.000 h ab 90 W/m², linear dazwischen
-near(Heat.hoursFor(10), 1400); near(Heat.hoursFor(55), 1700); near(Heat.hoursFor(120), 2000);
+near(c.ww, 2350); near(c.hours, Heat.hoursFor(13146.8 / 125)); near(c.kW, 13146.8 / c.hours, 0.005);
+// Vollbenutzungsstunden aus dem Verbrauch je m²: 1.400 h bis 40 kWh/m², 2.000 h ab 160, linear dazwischen
+near(Heat.hoursFor(30), 1400); near(Heat.hoursFor(100), 1700); near(Heat.hoursFor(200), 2000);
 // Warmwasser separat: kein Abzug; mit Zirkulation 900 kWh Systemverluste
 near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'separat' }).cons.ww, 0);
 near(calc({ fuel: 'gas', gen: 'nt', amount: 20000, wwSys: 'zirk' }).cons.ww, 3 * 650 + 900);
@@ -47,4 +47,29 @@ near(calc(Object.assign({}, none, { A_wall: 100, U_wall: 1, biv: -5, wwWP: false
 // Reihenmittelhaus verliert weniger als das gleiche Haus freistehend
 assert.ok(calc({}).hull.W < calc({ type: 'reh' }).hull.W && calc({ type: 'reh' }).hull.W < calc({ type: 'efh' }).hull.W);
 
+// Gleicher Verbrauch: Heizlast aus dem Verbrauch hängt nicht vom Baujahr ab,
+// und die Auslegung wird mit neuerem Baujahr nie größer
+for (const type of ['rmh', 'reh', 'dhh', 'efh']) {
+  let prev = Infinity, consKw = null;
+  for (let y = 0; y < Heat.YEARS.length; y++) {
+    const r = calc({ type, year: y, fuel: 'gas', gen: 'bw', amount: 18000, wwSys: 'speicher' });
+    if (consKw === null) consKw = r.cons.kW; else near(r.cons.kW, consKw);
+    assert.ok(r.basis <= prev + 1e-9, type + ' ' + Heat.YEARS[y].label + ': ' + r.basis + ' > ' + prev);
+    prev = r.basis;
+  }
+}
+// Mehr Verbrauch ergibt nie weniger Heizlast
+let last = 0;
+for (let a = 2000; a <= 60000; a += 500) {
+  const r = calc({ fuel: 'gas', gen: 'bw', amount: a, wwSys: 'speicher' });
+  assert.ok(r.cons.kW >= last - 1e-9 && r.basis >= 0, 'Verbrauch ' + a); last = r.cons.kW;
+}
+// Ohne Verbrauch sinkt die Heizlast mit jedem neueren Baujahr
+for (const type of ['rmh', 'reh', 'dhh', 'efh', 'whg']) {
+  let prev = Infinity;
+  for (let y = 0; y < Heat.YEARS.length; y++) {
+    const w = calc({ type, year: y, flatPos: 'top', roof: type === 'whg' ? 'attic' : 'dg' }).hull.W;
+    assert.ok(w < prev, type + ' ' + Heat.YEARS[y].label); prev = w;
+  }
+}
 console.log('Alle Handproben bestanden.');
