@@ -29,6 +29,7 @@
         </div>
         <button type="button" class="btn ghost small" data-reset>Alles zurücksetzen</button>
         <p class="note" id="reset-done" role="status" hidden>Alle Eingaben gelöscht. Das Beispiel ist wieder geladen.</p>
+        <div class="note own" id="own-values" hidden><span id="own-text"></span> <button type="button" class="linkbtn" id="own-clear">Eigene Detailwerte löschen</button></div>
         <p class="note" id="example-note">Beispiel: Reihenmittelhaus, Baujahr 1969–1978. Eigene Werte einfach überschreiben.</p>
       </div>
 
@@ -196,7 +197,8 @@
 
         <div class="grid">
           <label class="field"><span class="label">U-Wert der Wand aus dem Aufbau</span>
-            <select id="wallMat"></select></label>
+            <select id="wallMat"></select>
+            <span class="sub" id="wall-u-hint" hidden></span></label>
           <label class="field" id="f-wallD" hidden><span class="label">Wandstärke ohne Dämmung</span>
             <span class="inp"><input type="text" inputmode="decimal" id="wallD" value="36,5" autocomplete="off"><span class="unit">cm</span></span></label>
         </div>
@@ -287,6 +289,7 @@
         <p class="eyebrow">Heizlast des Gebäudes</p>
         <p class="big"><b id="r-kw">–</b><span>kW</span></p>
         <p class="r-kind" id="r-kind"></p>
+        <p class="r-cond" id="r-diff" hidden></p>
         <p class="r-cond" id="r-cond"></p>
       </div>
 
@@ -347,6 +350,10 @@
       <p><strong>Verbrauch.</strong> Jahresverbrauch mal Heizwert mal Nutzungsgrad ergibt die erzeugte Wärme. Davon geht das Warmwasser ab: 650 kWh je Person, mit Speicher 400 kWh mehr, mit Zirkulation weitere 500 kWh, bei separater Bereitung nichts. Ein Sommermonatsverbrauch ersetzt diese Schätzung. Der Rest geteilt durch die Vollbenutzungsstunden ergibt die Heizlast. Sie steigen linear von 1.400 h bei 20 W/m² bis 2.000 h ab 90 W/m² berechneter Heizlast. Gut gedämmte Häuser decken mehr über Sonne und Abwärme und erreichen weniger Volllaststunden. Die Spanne zeigt plus und minus 12 Prozent bei den Stunden.</p>
       <p><strong>Auslegungswert.</strong> Liegen beide Verfahren höchstens 20 Prozent auseinander, gilt ihr Mittelwert. Liegt der Verbrauch deutlich darunter, gilt der obere Verbrauchswert, damit eine Reserve bleibt. Liegt er deutlich darüber, gilt der Verbrauchswert.</p>
       <p><strong>Wärmepumpe.</strong> Für Warmwasser kommen 0,25 kW je Person dazu. Sperrzeiten erhöhen den Bedarf um den Faktor 24 / (24 − Sperrstunden). Die Kennlinie fällt linear bis zur Heizgrenze von 15 °C.</p>
+      <p><strong>Angenommene U-Werte je Baujahr</strong> in W/(m²K), wenn nichts anderes eingetragen ist. Schnell- und Detailmodus nutzen dieselben Werte; im Detailmodus stehen sie grau in den Feldern und lassen sich überschreiben.</p>
+      <div class="tablewrap" id="u-table"></div>
+      <p><strong>U-Wert der Wand aus dem Aufbau.</strong> U = 1 / (0,17 + Wandstärke / λ), bei zweischaligem Mauerwerk mit Luftschicht und Verblender plus 0,25 im Nenner. 0,17 m²K/W sind die Wärmeübergänge innen und außen. Putz bleibt unberücksichtigt, das liegt auf der sicheren Seite. Eine einschalige Wand aus Kalksandstein oder Beton ergibt deshalb deutlich schlechtere Werte als der Baujahr-Durchschnitt, der viele Bauweisen mischt.</p>
+      <div class="tablewrap" id="mat-table"></div>
       <p><strong>Grenzen.</strong> Die Außentemperatur je Postleitzahl ist ein gerundeter Richtwert. Gebäude mit Anbauten, Wintergärten, sehr hohen Räumen oder gemischter Bauweise brauchen die Detaileingabe oder eine Berechnung vor Ort.</p>
     </div>
   </details>
