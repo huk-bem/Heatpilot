@@ -137,13 +137,15 @@
     separat:  { label: 'Separat, z. B. Durchlauferhitzer oder Elektroboiler' }
   };
 
-  // Vollbenutzungsstunden: Je besser gedämmt, desto größer der Anteil der Sonnen- und
-  // inneren Gewinne und desto weniger Stunden läuft die Heizung rechnerisch unter Volllast.
-  // Linear zwischen 1.400 h (20 W/m² und weniger) und 2.000 h (90 W/m² und mehr), ohne Sprünge.
-  function hoursFor(spec) {
-    if (!(spec > 0)) return 2000;
-    var x = Math.min(Math.max(spec, 20), 90);
-    return Math.round((1400 + (x - 20) * 600 / 70) / 10) * 10;
+  // Vollbenutzungsstunden aus dem gemessenen Heizwärmeverbrauch je m² (kWh/m²a):
+  // Sparsame Häuser decken mehr über Sonne und Abwärme und kommen auf weniger Volllaststunden.
+  // Linear zwischen 1.400 h (40 kWh/m²a und weniger) und 2.000 h (160 kWh/m²a und mehr).
+  // Bewusst unabhängig vom Baujahr: Derselbe Verbrauch ergibt immer dieselbe Heizlast,
+  // und mehr Verbrauch ergibt immer mehr Heizlast.
+  function hoursFor(q) {
+    if (!(q > 0)) return 2000;
+    var x = Math.min(Math.max(q, 40), 160);
+    return Math.round((1400 + (x - 40) * 5) / 10) * 10;
   }
 
   /* ---------- Rechenkern ---------- */
@@ -294,7 +296,7 @@
     var cons = null;
     var fuel = FUEL[s.fuel];
     auto.eta = fuel ? (fuel.gen ? (GEN[s.gen] || GEN.nt).eta : fuel.eta) : null;
-    auto.hours = hoursFor(hull.spec);
+    auto.hours = 2000;
     var persons = Math.max(pick(s.persons, 3), 0);
     var wwSys = WWSYS[s.wwSys] ? s.wwSys : (s.wwIncl === false ? 'separat' : 'speicher');
     auto.wwKwh = wwSys === 'separat' ? 0 : persons * C.wwUse +
@@ -306,11 +308,12 @@
     }
     if (fuel && has(s.amount) && s.amount > 0) {
       var eta = pick(s.eta, auto.eta);
-      var hours = Math.max(pick(s.hours, auto.hours), 500);
       var useful = s.amount * fuel.hi * eta;
       var ww = Math.max(pick(s.wwKwh, auto.wwKwh), 0);
       if (has(s.wwKwh)) wwSource = 'manual';
       var qh = Math.max(useful - ww, 0);
+      auto.hours = hoursFor(area > 0 ? qh / area : 0);
+      var hours = Math.max(pick(s.hours, auto.hours), 500);
       cons = {
         useful: useful, ww: ww, wwSys: wwSys, wwSource: wwSource, qh: qh, hours: hours,
         kW: qh / hours, low: qh / (hours * 1.12), high: qh / (hours * 0.88),
@@ -325,9 +328,15 @@
     var basis, basisKind;
     if (cons && basisMode === 'cons') { basis = cons.kW; basisKind = 'cons'; }
     else if (!cons || basisMode === 'hull') { basis = hull.kW; basisKind = 'hull'; }
-    else if (Math.abs(cons.dev) <= 0.2) { basis = (hull.kW + cons.kW) / 2; basisKind = 'mean'; }
-    else if (cons.dev < 0) { basis = cons.high; basisKind = 'consHigh'; }   // Reserve, falls bisher sparsam geheizt wurde
-    else { basis = cons.kW; basisKind = 'cons'; }
+    else {
+      // Der Verbrauch ist gemessen und gilt als Untergrenze. Liegt die Hüllrechnung darüber,
+      // wird die Hälfte der Differenz als Reserve addiert, höchstens bis zum oberen Verbrauchswert.
+      // Stetig: Kleine Änderungen der Eingaben ändern das Ergebnis nur wenig, ohne Sprünge.
+      var mean = (hull.kW + cons.kW) / 2;
+      if (hull.kW <= cons.kW) { basis = cons.kW; basisKind = 'cons'; }
+      else if (mean <= cons.high) { basis = mean; basisKind = 'mean'; }
+      else { basis = cons.high; basisKind = 'consHigh'; }
+    }
 
     /* Wärmepumpe */
     var wwKw = s.wwWP ? persons * C.wwKwPerPerson : 0;
@@ -606,7 +615,7 @@
     var dir = dev < 0 ? 'unter' : 'über';
     var why = '';
     if (abs > 0.15 && dev < 0) {
-      why = 'Typische Gründe: einzelne Räume bleiben kühl, ein Kaminofen heizt mit, oder die Bauteile sind besser als für das Baujahr üblich. Im Detailmodus lassen sich Dämmung, Fenster und Flächen genauer angeben. Bis dahin rechnet die Auslegung mit dem oberen Verbrauchswert als Reserve.';
+      why = 'Typische Gründe: einzelne Räume bleiben kühl, ein Kaminofen heizt mit, oder die Bauteile sind besser als für das Baujahr üblich. Im Detailmodus lassen sich Dämmung, Fenster und Flächen genauer angeben. Die Auslegung liegt bis dahin etwas über dem Verbrauchswert, höchstens beim oberen Wert der Spanne.';
     } else if (abs > 0.15) {
       why = 'Typische Gründe: höhere Raumtemperaturen, ein schlechterer Kessel als angenommen, viel Warmwasser, oder die Bauteile sind schlechter als für das Baujahr üblich.';
     }

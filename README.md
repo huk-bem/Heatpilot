@@ -56,9 +56,9 @@ Alle Kennwerte stehen am Anfang von `assets/heatpilot.js` (`YEARS`, `WIN`, `WALL
 ```
 
 - Warmwasser: 650 kWh je Person; mit Speicher 400 kWh mehr, mit Zirkulation weitere 500 kWh; bei separater Bereitung kein Abzug. Ein Sommermonatsverbrauch mal zwölf ersetzt die Schätzung.
-- Vollbenutzungsstunden: linear von 1.400 h (20 W/m²) bis 2.000 h (ab 90 W/m² berechneter Heizlast).
+- Vollbenutzungsstunden aus dem gemessenen Heizwärmeverbrauch je m²: linear von 1.400 h (40 kWh/m²a und weniger) bis 2.000 h (ab 160 kWh/m²a), unabhängig vom Baujahr.
 
-**Auslegungswert:** Mittelwert, wenn beide Verfahren höchstens 20 % auseinanderliegen. Liegt der Verbrauch deutlich darunter, der obere Verbrauchswert als Reserve. Liegt er deutlich darüber, der Verbrauchswert.
+**Auslegungswert:** Der Verbrauchswert ist die Untergrenze. Liegt die Hüllrechnung darüber, kommt die Hälfte der Differenz dazu, höchstens bis zum oberen Verbrauchswert (Stunden × 0,88). Die Regel ist stetig und steigt mit Verbrauch und Hüllrechnung, nie umgekehrt.
 
 **Wärmepumpe:** Warmwasser-Zuschlag 0,25 kW je Person, Sperrzeitfaktor 24 / (24 − Sperrstunden), Kennlinie linear bis zur Heizgrenze von 15 °C.
 
