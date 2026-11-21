@@ -5,19 +5,21 @@
 
   /* ---------- Kennwerte ---------- */
 
-  // Pauschale U-Werte unsanierter Bauteile nach Baualtersklasse, W/(m²K).
-  // Orientierung: Bekanntmachung der Regeln zur Datenaufnahme und Datenverwendung
-  // im Wohngebäudebestand (BAnz AT 04.12.2020) und IWU-Gebäudetypologie (TABULA).
+  // Typische U-Werte unsanierter Bauteile nach Baualtersklasse, W/(m²K).
+  // Bis 2008 abgeglichen mit den Typgebäuden der IWU-Wohngebäudetypologie (TABULA,
+  // Ist-Zustand, Tabelle C.1); danach Anforderungsniveau EnEV 2009 bzw. EnEV 2016/GEG.
+  // Die Pauschalwerte der Bekanntmachung (BAnz AT 04.12.2020) liegen teils höher,
+  // weil sie für den Energieausweis bewusst ungünstig angesetzt sind.
   var YEARS = [
-    { label: 'bis 1918',  wall: 1.7,  roof: 1.8,  ogd: 1.0,  floor: 1.2,  win: 'verbund', door: 3.5, hl: 2.8 },
-    { label: '1919–1948', wall: 1.7,  roof: 1.4,  ogd: 1.0,  floor: 1.2,  win: 'verbund', door: 3.5, hl: 2.7 },
-    { label: '1949–1957', wall: 1.4,  roof: 1.4,  ogd: 1.3,  floor: 1.2,  win: 'iso',     door: 3.5, hl: 2.5 },
-    { label: '1958–1968', wall: 1.4,  roof: 1.3,  ogd: 1.3,  floor: 1.0,  win: 'iso',     door: 3.5, hl: 2.5 },
-    { label: '1969–1978', wall: 1.0,  roof: 0.8,  ogd: 0.6,  floor: 1.0,  win: 'iso',     door: 3.5, hl: 2.5 },
-    { label: '1979–1983', wall: 0.8,  roof: 0.5,  ogd: 0.4,  floor: 0.8,  win: 'iso',     door: 3.0, hl: 2.5 },
-    { label: '1984–1994', wall: 0.6,  roof: 0.4,  ogd: 0.3,  floor: 0.6,  win: 'iso',     door: 3.0, hl: 2.5 },
-    { label: '1995–2001', wall: 0.5,  roof: 0.3,  ogd: 0.3,  floor: 0.5,  win: 'wsv95',   door: 2.0, hl: 2.5 },
-    { label: '2002–2008', wall: 0.35, roof: 0.25, ogd: 0.25, floor: 0.4,  win: 'wsv95',   door: 2.0, hl: 2.5 },
+    { label: 'bis 1918',  wall: 1.7,  roof: 1.3,  ogd: 1.0,  floor: 1.2,  win: 'verbund', door: 3.5, hl: 2.8 },
+    { label: '1919–1948', wall: 1.7,  roof: 1.4,  ogd: 0.8,  floor: 1.0,  win: 'verbund', door: 3.5, hl: 2.7 },
+    { label: '1949–1957', wall: 1.4,  roof: 1.4,  ogd: 0.8,  floor: 1.2,  win: 'iso',     door: 3.5, hl: 2.5 },
+    { label: '1958–1968', wall: 1.2,  roof: 0.8,  ogd: 0.6,  floor: 1.6,  win: 'iso',     door: 3.5, hl: 2.5 },
+    { label: '1969–1978', wall: 1.0,  roof: 0.5,  ogd: 0.6,  floor: 1.0,  win: 'iso',     door: 3.5, hl: 2.5 },
+    { label: '1979–1983', wall: 0.8,  roof: 0.5,  ogd: 0.5,  floor: 0.8,  win: 'iso',     door: 3.0, hl: 2.5 },
+    { label: '1984–1994', wall: 0.55, roof: 0.4,  ogd: 0.4,  floor: 0.6,  win: 'iso',     door: 3.0, hl: 2.5 },
+    { label: '1995–2001', wall: 0.45, roof: 0.35, ogd: 0.3,  floor: 0.45, win: 'wsv95',   door: 2.0, hl: 2.5 },
+    { label: '2002–2008', wall: 0.3,  roof: 0.25, ogd: 0.24, floor: 0.3,  win: 'wsv95',   door: 2.0, hl: 2.5 },
     { label: '2009–2015', wall: 0.28, roof: 0.20, ogd: 0.20, floor: 0.35, win: 'wsv',     door: 1.5, hl: 2.5 },
     { label: 'ab 2016',   wall: 0.21, roof: 0.16, ogd: 0.16, floor: 0.28, win: 'drei',    door: 1.3, hl: 2.5 }
   ];
@@ -749,13 +751,18 @@
     $('form').addEventListener('input', function () { $('example-note').hidden = true; render(); });
     $('form').addEventListener('change', render);
     $('form').addEventListener('submit', function (e) { e.preventDefault(); });
-    $('reset').addEventListener('click', function () {
+    function resetAll() {
       try { root.localStorage.removeItem(STORE); } catch (e) { /* nichts zu löschen */ }
       $('form').reset();
       defaults();
+      $('copy-out').hidden = true;
       $('example-note').hidden = false;
       render();
-    });
+      $('reset-done').hidden = false;
+      root.setTimeout(function () { $('reset-done').hidden = true; }, 2500);
+      root.scrollTo(0, 0);
+    }
+    doc.querySelectorAll('[data-reset]').forEach(function (b) { b.addEventListener('click', resetAll); });
     $('copy').addEventListener('click', function () {
       var out = $('copy-out'), btn = $('copy');
       function fallback() { out.hidden = false; out.value = lastSummary; out.focus(); out.select(); }

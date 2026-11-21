@@ -27,6 +27,8 @@
           <label><input type="radio" name="mode" id="mode-quick" value="quick" checked><span>Schnell</span></label>
           <label><input type="radio" name="mode" id="mode-detail" value="detail"><span>Detailliert</span></label>
         </div>
+        <button type="button" class="btn ghost small" data-reset>Alles zurücksetzen</button>
+        <p class="note" id="reset-done" role="status" hidden>Alle Eingaben gelöscht. Das Beispiel ist wieder geladen.</p>
         <p class="note" id="example-note">Beispiel: Reihenmittelhaus, Baujahr 1969–1978. Eigene Werte einfach überschreiben.</p>
       </div>
 
@@ -276,7 +278,7 @@
       </section>
 
       <div class="actions">
-        <button type="button" class="btn ghost" id="reset">Auf Beispiel zurücksetzen</button>
+        <button type="button" class="btn ghost" data-reset>Alles zurücksetzen</button>
       </div>
     </form>
 
@@ -336,7 +338,7 @@
       <p class="formula">Φ = Σ (A · (U + ΔU<sub>WB</sub>) · f) · (θ<sub>innen</sub> − θ<sub>außen</sub>) + 0,34 · n · V · (θ<sub>innen</sub> − θ<sub>außen</sub>)</p>
       <ul>
         <li>Flächen entstehen im Schnellmodus aus Wohnfläche, Haustyp und Geschosszahl. Im Detailmodus lassen sie sich einzeln überschreiben.</li>
-        <li>U-Werte ohne eigene Angabe sind Pauschalwerte je Baualtersklasse, angelehnt an die Bekanntmachung der Regeln zur Datenaufnahme im Wohngebäudebestand (BAnz AT 04.12.2020) und die IWU-Gebäudetypologie. Nachträgliche Dämmung rechnet mit Wärmeleitgruppe 035.</li>
+        <li>U-Werte ohne eigene Angabe sind typische Werte je Baualtersklasse, bis 2008 abgeglichen mit den Typgebäuden der IWU-Wohngebäudetypologie, danach nach EnEV 2009 und GEG. Nachträgliche Dämmung rechnet mit Wärmeleitgruppe 035.</li>
         <li>Faktor f: 1,0 gegen Außenluft, 0,8 gegen unbeheizten Dachboden, 0,5 gegen unbeheizten Keller, 0,3 gegen Erdreich.</li>
         <li>Wände und Decken zu beheizten Nachbarn zählen mit einer Nachbartemperatur von 15 °C.</li>
         <li>Der Luftwechsel n liegt je nach Baujahr und Fenstern zwischen 0,4 und 0,6 pro Stunde, mit Wärmerückgewinnung bei 0,23. Der Wärmebrückenzuschlag beträgt 0,10 W/(m²K), ab Baujahr 2009 0,05. Eine windgeschützte Lage senkt ihn um 15 Prozent, eine freie, windige Lage erhöht ihn um 30 Prozent.</li>

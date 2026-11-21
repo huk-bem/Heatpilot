@@ -42,7 +42,7 @@ Alle Kennwerte stehen am Anfang von `assets/heatpilot.js` (`YEARS`, `WIN`, `WALL
 ```
 
 - Flächen: im Schnellmodus aus Wohnfläche, Haustyp und Geschosszahl geschätzt, im Detailmodus einzeln überschreibbar
-- U-Werte: Pauschalwerte je Baualtersklasse, angelehnt an die Bekanntmachung der Regeln zur Datenaufnahme und Datenverwendung im Wohngebäudebestand (BAnz AT 04.12.2020) und die IWU-Gebäudetypologie; nachträgliche Dämmung mit λ = 0,035 W/(mK)
+- U-Werte: typische Werte je Baualtersklasse, bis 2008 abgeglichen mit den Typgebäuden der IWU-Wohngebäudetypologie (TABULA, Ist-Zustand), danach EnEV 2009 und GEG; nachträgliche Dämmung mit λ = 0,035 W/(mK)
 - Faktor f: 1,0 Außenluft, 0,8 unbeheizter Dachboden, 0,5 unbeheizter Keller, 0,3 Erdreich
 - Nachbarn: Trennwände und Decken mit U = 0,9 W/(m²K) gegen 15 °C
 - Luftwechsel n: 0,4 bis 0,6 1/h je nach Baujahr und Fenstern, 0,23 mit Wärmerückgewinnung; Windlage geschützt × 0,85, frei und windig × 1,3
