@@ -420,7 +420,7 @@
     'A_wall', 'A_win', 'A_door', 'A_roof', 'A_floor', 'A_party',
     'U_wall', 'U_win', 'U_door', 'U_roof', 'U_floor', 'U_party', 'dUwb', 'nAir', 'tn', 'eta', 'hours', 'summer', 'wwKwh'];
 
-  function read() {
+  function read(forceQuick) {
     var s = {};
     NUM.forEach(function (k) { s[k] = parse($(k).value); });
     SEL.forEach(function (k) { s[k] = $(k).value; });
@@ -433,7 +433,7 @@
     s.block = parseFloat(s.block);
     s.biv = s.biv === '' ? null : parseFloat(s.biv);
     if (s.eta !== null) s.eta = s.fuel === 'wp' ? s.eta : s.eta / 100;
-    if (s.mode !== 'detail') DETAIL_ONLY.forEach(function (k) { s[k] = typeof s[k] === 'boolean' ? false : (typeof s[k] === 'string' ? '' : null); });
+    if (s.mode !== 'detail' || forceQuick) DETAIL_ONLY.forEach(function (k) { s[k] = typeof s[k] === 'boolean' ? false : (typeof s[k] === 'string' ? '' : null); });
     return s;
   }
 
@@ -477,6 +477,13 @@
     var wallCalc = detail && !!s.wallMat;
     show($('f-wallD'), wallCalc);
     show($('f-wallShell'), wallCalc);
+    show($('wall-u-hint'), wallCalc);
+    if (wallCalc && has(s.wallD) && s.wallD > 0 && WALLMAT[s.wallMat]) {
+      var uAufbau = 1 / (C.rSurf + (s.wallD / 100) / WALLMAT[s.wallMat].l + (s.wallShell ? C.rShell : 0));
+      $('wall-u-hint').textContent = 'Ergibt U = ' + fmt(uAufbau, 2) + ' W/(m²K) für die Wand ohne Dämmung (λ = ' +
+        fmt(WALLMAT[s.wallMat].l, 2).replace(/0$/, '') + ' W/(mK)). Typisch für das Baujahr ' + YEARS[s.year].label + ' wären ' +
+        fmt(YEARS[s.year].wall, 2) + '. Eine nachträgliche Dämmung oben kommt noch dazu.';
+    }
 
     $('roof-dg-label').textContent = flat ? 'Dachschräge über der Wohnung' : 'Ausgebaut und beheizt';
     $('roof-attic-label').textContent = flat ? 'Kalter Dachboden darüber' : 'Kalter Dachboden';
@@ -652,17 +659,91 @@
       '<text class="axis" x="' + ml + '" y="12">kW</text></svg>';
   }
 
+  var LABEL = {
+    width: 'Hausbreite', depth: 'Haustiefe', hg: 'Geschosshöhe', hl: 'Raumhöhe',
+    A_wall: 'Fläche Außenwand', A_win: 'Fläche Fenster', A_door: 'Fläche Haustür', A_roof: 'Fläche Dach',
+    A_floor: 'Fläche Boden', A_party: 'Fläche zum Nachbarn',
+    U_wall: 'U-Wert Außenwand', U_win: 'U-Wert Fenster', U_door: 'U-Wert Haustür', U_roof: 'U-Wert Dach',
+    U_floor: 'U-Wert Boden', U_party: 'U-Wert zum Nachbarn', dUwb: 'Wärmebrücken', nAir: 'Luftwechsel',
+    tn: 'Nachbartemperatur', eta: 'Nutzungsgrad', hours: 'Vollbenutzungsstunden', summer: 'Sommerverbrauch',
+    wwKwh: 'Warmwasser-Abzug', wallMat: 'Wandaufbau'
+  };
+
+  // Eigene Detailwerte sichtbar machen: Sie gelten nur im Detailmodus.
+  function ownValues() {
+    var list = [];
+    DETAIL_ONLY.forEach(function (k) {
+      var el = $(k);
+      if (!LABEL[k] || !el) return;
+      if (k === 'wallMat') { if (el.value) list.push({ k: k, txt: LABEL[k] + ' ' + WALLMAT[el.value].label + ' ' + $('wallD').value + ' cm' }); return; }
+      var v = el.value.trim();
+      el.classList.toggle('own', v !== '');
+      if (v !== '') list.push({ k: k, txt: LABEL[k] + ' ' + v });
+    });
+    return list;
+  }
+
+  function renderOwn(s, r) {
+    var own = ownValues();
+    var box = $('own-values');
+    var diffEl = $('r-diff');
+    diffEl.hidden = true;
+    if (!own.length) { box.hidden = true; return; }
+    box.hidden = false;
+    if (s.mode === 'detail') {
+      var q = calc(read(true));
+      var d = q.hull.kW > 0 ? (r.hull.kW - q.hull.kW) / q.hull.kW : 0;
+      $('own-text').textContent = 'Eigene Werte: ' + own.map(function (o) { return o.txt; }).join(', ') + '.';
+      if (Math.abs(d) >= 0.01) {
+        diffEl.hidden = false;
+        diffEl.textContent = 'Gebäudehülle mit eigenen Werten ' + fmt(r.hull.kW, 1) + ' kW, Schnellschätzung ' + fmt(q.hull.kW, 1) +
+          ' kW (' + (d > 0 ? '+' : '−') + fmt(Math.abs(d) * 100, 0) + ' %).';
+      }
+    } else {
+      $('own-text').textContent = own.length + (own.length === 1 ? ' eigener Detailwert ist' : ' eigene Detailwerte sind') +
+        ' gespeichert. Sie gelten nur im Detailmodus, die Schnellschätzung rechnet ohne sie.';
+    }
+  }
+
+  function clearOwn() {
+    DETAIL_ONLY.forEach(function (k) {
+      var el = $(k);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = false;
+      else if (k === 'wallD') el.value = '36,5';
+      else el.value = '';
+    });
+    render();
+  }
+
+  function renderUTable() {
+    var head = '<tr><th>Baujahr</th><th>Wand</th><th>Dachschräge</th><th>Oberste Decke</th><th>Kellerdecke, Boden</th><th>Fenster</th><th>Tür</th></tr>';
+    var rows = YEARS.map(function (y) {
+      return '<tr><td>' + y.label + '</td><td>' + fmt(y.wall, 2) + '</td><td>' + fmt(y.roof, 2) + '</td><td>' + fmt(y.ogd, 2) +
+        '</td><td>' + fmt(y.floor, 2) + '</td><td>' + fmt(WIN[y.win].u, 1) + '</td><td>' + fmt(y.door, 1) + '</td></tr>';
+    }).join('');
+    $('u-table').innerHTML = '<table><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>';
+    $('mat-table').innerHTML = '<table><thead><tr><th>Wandbaustoff</th><th>λ in W/(mK)</th><th>U bei 24 cm</th><th>U bei 36,5 cm</th></tr></thead><tbody>' +
+      Object.keys(WALLMAT).map(function (k) {
+        var l = WALLMAT[k].l;
+        function u(cm) { return fmt(1 / (C.rSurf + cm / 100 / l), 2); }
+        return '<tr><td>' + WALLMAT[k].label + '</td><td>' + fmt(l, 3).replace(/0+$/, '').replace(/,$/, '') + '</td><td>' + u(24) + '</td><td>' + u(36.5) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
   var lastSummary = '';
 
   function render() {
     var s = read();
     var r = calc(s);
+    renderOwn(s, r);
     syncForm(s, r);
 
     var kind = { hull: 'Aus der Gebäudehülle berechnet', cons: 'Aus dem Verbrauch abgeleitet', consHigh: 'Oberer Wert aus dem Verbrauch', mean: 'Mittel aus Berechnung und Verbrauch' }[r.basisKind];
     $('r-kw').textContent = fmt(r.basis, 1);
     $('bar-kw').textContent = fmt(r.basis, 1) + ' kW';
     $('r-kind').textContent = kind;
+
     $('r-cond').textContent = 'bei ' + temp(r.te) + ' außen und ' + temp(r.ti) + ' innen';
     var spec = r.area > 0 ? r.basis * 1000 / r.area : 0;
     $('r-spec').textContent = fmt(spec, 0);
@@ -751,6 +832,8 @@
     $('form').addEventListener('input', function () { $('example-note').hidden = true; render(); });
     $('form').addEventListener('change', render);
     $('form').addEventListener('submit', function (e) { e.preventDefault(); });
+    renderUTable();
+    $('own-clear').addEventListener('click', clearOwn);
     function resetAll() {
       try { root.localStorage.removeItem(STORE); } catch (e) { /* nichts zu löschen */ }
       $('form').reset();
