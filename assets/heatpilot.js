@@ -776,12 +776,16 @@
     if (wp.wwKw > 0) steps += '<li><span>Warmwasser, ' + fmt(r.persons, 0) + ' Personen</span><span>+ ' + fmt(wp.wwKw, 2) + ' kW</span></li>';
     if (wp.block > 0) steps += '<li><span>Sperrzeit ' + fmt(wp.block, 0) + ' h am Tag</span><span>× ' + fmt(wp.fBlock, 2) + '</span></li>';
     steps += '<li class="sum"><span>Bedarf bei ' + temp(r.te) + '</span><span>' + fmt(wp.pNorm, 1) + ' kW</span></li>';
+    if (r.basisKind === 'hull') {
+      steps += '<li><span>Erfahrungswert ohne Reserve (85 %)</span><span>' + fmt(wp.pNorm * 0.85, 1) + ' kW</span></li>';
+    }
     if (wp.biv !== null) {
       steps += '<li><span>Davon Wärmepumpe (Bivalenzpunkt ' + temp(wp.biv) + ')</span><span>' + fmt(wp.pReq, 1) + ' kW</span></li>' +
         '<li><span>Heizstab an den kältesten Tagen</span><span>' + fmt(wp.rod, 1) + ' kW</span></li>';
     }
     $('wp-steps').innerHTML = steps;
-    $('wp-part').textContent = 'Bei +7 °C braucht das Haus nur noch etwa ' + fmt(wp.line(7), 1) +
+    $('wp-part').textContent = (r.basisKind === 'hull' ? 'Die Norm rechnet ohne Sonne, Abwärme und Personen. In der Praxis liegt die Spitzenlast meist bei 80 bis 85 % davon; der Jahresverbrauch zeigt, wo das eigene Haus liegt. ' : '') +
+      'Bei +7 °C braucht das Haus nur noch etwa ' + fmt(wp.line(7), 1) +
       ' kW. Die kleinste Leistungsstufe der Wärmepumpe sollte nicht weit darüber liegen, sonst taktet sie in der Übergangszeit.';
     renderChart(r);
 
